@@ -1,0 +1,42 @@
+# --------------------------------
+# ENTORNO VIRTUAL
+# --------------------------------
+venv/
+.env/
+.venv/
+
+# --------------------------------
+# ARCHIVOS PYTHON COMPILADOS
+# --------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# --------------------------------
+# ARCHIVOS DE LOG / TEMPORALES
+# --------------------------------
+*.log
+*.tmp
+*.temp
+
+# --------------------------------
+# ARCHIVOS DEL SISTEMA / EDITORES
+# --------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --------------------------------
+# ARCHIVOS DE ENTORNO SENSIBLES
+# (config con tokens o API keys)
+# --------------------------------
+config.py
+
+# --------------------------------
+# ARCHIVOS DE PAQUETES/BUILD
+# --------------------------------
+dist/
+build/
+*.egg-info/
