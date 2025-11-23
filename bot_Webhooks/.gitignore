@@ -2,7 +2,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,linux,windows,python,venv,dotenv
 
 backend/data.db
-
+ngrok.exe
 ### dotenv ###
 .env
 ### Linux ###
