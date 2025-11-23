@@ -1,0 +1,6 @@
+ BOT_TOKEN= your telegram bot token here
+BASE_URL=https://api.telegram.org/bot
+# Endpoint del backend (nuestro FastAPI )
+BACKEND_URL= # http://localhost:700
+NGROK_URL= your ngrok url here
+PORT=8001
