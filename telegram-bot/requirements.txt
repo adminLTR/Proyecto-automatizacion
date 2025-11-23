@@ -1,1 +1,4 @@
-requests==2.32.0
+fastapi
+uvicorn
+python-telegram-bot
+requests
