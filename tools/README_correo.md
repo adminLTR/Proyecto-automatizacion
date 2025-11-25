@@ -25,15 +25,21 @@ Si nos sale la versión significa que está instalado correctamente.
 Para que el script funcione en tu máquina local, necesitas descargar el archivo de credenciales del proyecto compartido:
 
 2.2.1. Ve a la sección de **Credenciales** en la consola de Google Cloud del proyecto.
+
 2.2.2. Busca el **ID de cliente de OAuth 2.0** (Tipo: Aplicación de escritorio) que ya fue creado.
+
 2.2.3. Haz clic en el icono de descarga (⬇️) para bajar el archivo JSON.
+
 2.2.4. **Renombra** el archivo descargado a `credentials.json`.
+
 2.2.5. **Mueve** el archivo `credentials.json` dentro de esta carpeta `Proyecto-automatizacion\tools\`.
+
 
 > **Nota:** Sin este archivo, el script fallará inmediatamente.
 
 ### 2.3. Crear un entorno virtual
 2.3.1. Abrir una consola de linea de comandos (CMD en Windows) en la ruta del repositorio clonado en el dispositivo.
+
 2.3.2. Creamos un entorno virtual en la raíz del proyecto usando el siguiente comando:
 
     python -m virtualenv venv
