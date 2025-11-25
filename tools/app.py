@@ -16,9 +16,10 @@ def home():
 def test_email():    
     resultado = tool_enviar_correo(
         service_gmail, 
-        destinatario="giacomo.madrid@unmsm.edu.pe", # Correo de prueba
+        # Correo de prueba (CAMBIAR POR EL DESTINO, SOLO PARA PRUEBAS)
+        destinatario="email@example.com", 
         asunto="Prueba desde el Bot de Telegram",
-        cuerpo="Hola, este es un mensaje enviado automáticamente por el asistente virtual. \nPD: Miau :3"
+        cuerpo="Hola, este es un mensaje enviado automáticamente por el asistente virtual."
     )
     return jsonify({"resultado": resultado})
 
