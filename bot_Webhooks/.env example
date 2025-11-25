@@ -1,0 +1,6 @@
+BOT_TOKEN=8493551396:AAHjhKjiOs8c7RlRbVh4rvn80NTSxrWKmr8
+BASE_URL=https://api.telegram.org/bot
+# Endpoint del backend (nuestro FastAPI )
+BACKEND_URL=http://localhost:7000
+NGROK_URL=https://lizbeth-branchlike-unprejudicially.ngrok-free.dev
+PORT=8001
