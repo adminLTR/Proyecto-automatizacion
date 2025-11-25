@@ -89,7 +89,7 @@ Nos debe salir algo como:
     * Running on http://127.0.0.1:5000
     Press CTRL+C to quit
 
-**Nota:** Si es la primera vez que hacemos esto, se nos abrirá el navegador en la pestaña de autenticación de Google pidiendo acceso y autorización de nuestra app (Bot) para acceder a su correo y calendario. Ingresamos con el correo autenticado y aceptamos todo. En caso no se abra el navegador de manera automática, la consola mostrará el enlace al que deberá acceder para realizar la autenticación.
+> **Nota:** Si es la primera vez que hacemos esto, se nos abrirá el navegador en la pestaña de autenticación de Google pidiendo acceso y autorización de nuestra app (Bot) para acceder a su correo y calendario. Ingresamos con el correo autenticado y aceptamos todo. En caso no se abra el navegador de manera automática, la consola mostrará el enlace al que deberá acceder para realizar la autenticación.
 
 3.2.2. Accedemos a la dirección 
     
