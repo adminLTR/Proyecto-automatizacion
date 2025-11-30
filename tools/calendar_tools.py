@@ -1,11 +1,24 @@
-import os.path
+import os
 import datetime
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-SCOPES = ['https://www.googleapis.com/auth/calendar']
+# --- CONFIGURACIÓN DE RUTAS ABSOLUTAS ---
+# 1. Obtenemos la ruta de la carpeta donde está ESTE script (tools/)
+TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 2. Obtenemos la ruta RAÍZ del proyecto (una carpeta arriba de tools)
+ROOT_DIR = os.path.dirname(TOOLS_DIR)
+
+# 3. Construimos las rutas completas a los archivos JSON
+TOKEN_PATH = os.path.join(ROOT_DIR, 'token.json')
+CREDS_PATH = os.path.join(ROOT_DIR, 'credentials.json')
+
+SCOPES = ['https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/gmail.send']
 ZONA_HORARIA = 'America/Lima'
 
 # 1. CONEXIÓN Y AUTH 
@@ -14,16 +27,24 @@ def conectar_google():
     Autentica con Google y devuelve el servicio de Calendar.
     """
     creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    
+    # IMPORTANTE: Usar la variable TOKEN_PATH, no el string 'token.json'
+    if os.path.exists(TOKEN_PATH):
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
     
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            # IMPORTANTE: Usar la variable CREDS_PATH
+            if not os.path.exists(CREDS_PATH):
+                raise FileNotFoundError(f"No se encuentra el archivo de credenciales en: {CREDS_PATH}")
+                
+            flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
+        
+        # Guardamos el token actualizado en la ruta absoluta
+        with open(TOKEN_PATH, 'w') as token:
             token.write(creds.to_json())
             
     return build('calendar', 'v3', credentials=creds)
@@ -50,31 +71,50 @@ def formatear_respuesta(evento):
 
 # HERRAMIENTAS PARA EL AGENTE (TOOLS)
 
-def tool_listar_eventos(service):
+def tool_listar_eventos(service, time_min=None, time_max=None):
     """
-    Lista los próximos 10 eventos del calendario.
-    Retorna un string con la lista formateada.
+    Lista eventos. Si no se dan fechas, lista los próximos 10.
+    Si se dan fechas (ISO strings), filtra por ese rango.
     """
-    now_utc = datetime.datetime.now(datetime.timezone.utc)
-    
     try:
-        events_result = service.events().list(
-            calendarId='primary', timeMin=now_utc.isoformat(),
-            maxResults=10, singleEvents=True, orderBy='startTime'
-        ).execute()
-        events = events_result.get('items', [])
-
-        if not events:
-            return "No se encontraron eventos próximos en tu calendario."
+        # Si no envían fecha de inicio, usamos "ahora"
+        if not time_min:
+            now = datetime.datetime.utcnow().isoformat() + 'Z'
+            time_min = now
         
-        resultado = "**Tus próximos eventos:**\n"
-        for event in events:
-            resultado += f"- {formatear_respuesta(event)}\n"
-            
-        return resultado # El Agente leerá este texto
+        print(f"🔎 Buscando eventos desde {time_min} hasta {time_max}")
+
+        events_result = service.events().list(
+            calendarId='primary', 
+            timeMin=time_min,
+            timeMax=time_max, # Google permite que sea None (busca a futuro infinito)
+            maxResults=10 if not time_max else 50, # Si hay rango, traemos más por si acaso
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+        
+        eventos = events_result.get('items', [])
+
+        if not eventos:
+            return "📅 No se encontraron eventos en este rango."
+
+        respuesta = ""
+        for event in eventos:
+            start = event['start'].get('dateTime', event['start'].get('date'))
+            # Limpiamos un poco la fecha para que sea legible
+            # Formato esperado de Google: 2025-11-30T10:00:00-05:00
+            try:
+                fecha_obj = datetime.datetime.fromisoformat(start)
+                fecha_str = fecha_obj.strftime("%d/%m %H:%M") # Ej: 30/11 10:00
+            except:
+                fecha_str = start # Si falla, dejamos el original
+
+            respuesta += f"• {fecha_str} - {event['summary']}\n"
+
+        return respuesta
 
     except Exception as e:
-        return f"Error al leer el calendario: {str(e)}"
+        return f"❌ Error al listar eventos: {str(e)}"
 
 
 def tool_crear_evento(service, titulo, fecha, hora_inicio, hora_fin):

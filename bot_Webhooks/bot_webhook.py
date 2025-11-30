@@ -3,6 +3,8 @@ import requests
 from config import settings
 from services import send_message, send_keyboard
 
+URL_CALENDAR = "http://127.0.0.1:7000/consulta"
+URL_GMAIL    = "http://127.0.0.1:7002/consulta"
 
 app = FastAPI()
 
@@ -13,6 +15,7 @@ app = FastAPI()
 def determinar_consulta(texto):
     t = texto.lower()
 
+    # Mapeamos las frases a las intenciones
     if t == "horario de hoy":
         return "horario_hoy"
 
@@ -24,12 +27,20 @@ def determinar_consulta(texto):
 
     if t == "sugerencias ia":
         return "sugerencias"
-
+    
+    if "leer correos" in t:
+        return "leer_correos"
+    
+    if "crear mensaje" in t:
+        return "crear_mensaje_simulado"
+        
+    if "enviar correo" in t:
+        return "enviar_correo_real"
     return None
 
 
 # -----------------------------------------
-# 2. Enviar consulta al backend (Calendar)
+# 2. Enviar consulta al backend (Puerto 7000)
 # -----------------------------------------
 def enviar_consulta_backend(chat_id, user_id, consulta):
     url_backend = f"{settings.BACKEND_URL}/consulta"
@@ -47,13 +58,18 @@ def enviar_consulta_backend(chat_id, user_id, consulta):
     except:
         return {"tipo": "error", "detalle": "Backend no disponible"}
 
-
 # -----------------------------------------
 # 3. Procesar respuesta del backend
 # -----------------------------------------
 def procesar_respuesta(chat_id, json_resp):
 
     tipo = json_resp.get("tipo")
+
+    # --- [NUEVO] SOPORTE PARA CALENDAR TOOLS ---
+    if tipo == "respuesta_texto":
+        send_message(chat_id, json_resp.get("mensaje"))
+        return
+    # -------------------------------------------
 
     if tipo == "respuesta_horario":
         actividades = "\n".join(
@@ -79,7 +95,7 @@ def procesar_respuesta(chat_id, json_resp):
 
 
 # -----------------------------------------
-# 4. Endpoint Webhook (Telegram -> FastAPI)
+# 4. Endpoint Webhook (MANTENIENDO EL TOKEN)
 # -----------------------------------------
 @app.post(f"/webhook/{settings.BOT_TOKEN}")
 async def recibir_update(request: Request):
@@ -108,3 +124,6 @@ async def recibir_update(request: Request):
         send_keyboard(chat_id, "Selecciona una opción válida.")
 
     return {"ok": True}
+
+
+
