@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Telegram Bot con Flask - Automatización de Email y Calendar
-Un solo archivo con toda la funcionalidad integrada
+Telegram Bot con POLLING - Automatización de Email y Calendar
+Versión simplificada SIN Flask, SIN webhooks, SIN ngrok
+Solo ejecuta y funciona directamente desde tu PC
 """
 import os
 import sys
 import base64
 import datetime
 import logging
+import time
 from typing import Dict, Any, Optional
 from email.mime.text import MIMEText
 
-from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import requests
 
@@ -26,12 +27,6 @@ from googleapiclient.errors import HttpError
 # ==================== CONFIGURACIÓN ====================
 
 load_dotenv()
-
-# Flask
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
-APP_HOST = os.getenv('APP_HOST', '0.0.0.0')
-APP_PORT = int(os.getenv('APP_PORT', 5000))
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
 # Telegram
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -52,17 +47,19 @@ DEFAULT_EMAIL_RECIPIENT = os.getenv('DEFAULT_EMAIL_RECIPIENT', 'default@example.
 EMAIL_DELETE_DAYS_AGO = int(os.getenv('EMAIL_DELETE_DAYS_AGO', 7))
 CALENDAR_TIMEZONE = os.getenv('CALENDAR_TIMEZONE', 'America/Lima')
 
+# Logging
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+
 # ==================== CONFIGURACIÓN DE LOGGING ====================
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
 
 # Reducir ruido de librerías
-logging.getLogger('werkzeug').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 # ==================== SERVICIOS GOOGLE ====================
@@ -216,16 +213,7 @@ class GoogleService:
     
     def create_event(self, title: str, date: str, start_time: str = "10:00", 
                      end_time: str = "11:00", description: str = "") -> Dict[str, Any]:
-        """
-        Crear evento en el calendario
-        
-        Args:
-            title: Título del evento
-            date: Fecha en formato YYYY-MM-DD
-            start_time: Hora inicio en formato HH:MM (default: 10:00)
-            end_time: Hora fin en formato HH:MM (default: 11:00)
-            description: Descripción del evento
-        """
+        """Crear evento en el calendario"""
         if not self.authenticated:
             return {'success': False, 'message': 'Google not authenticated'}
         
@@ -253,12 +241,7 @@ class GoogleService:
             return {'success': False, 'message': str(e)}
     
     def delete_today_events(self, date: str = None) -> Dict[str, Any]:
-        """
-        Eliminar eventos de una fecha específica
-        
-        Args:
-            date: Fecha en formato YYYY-MM-DD (default: hoy)
-        """
+        """Eliminar eventos de una fecha específica"""
         if not self.authenticated:
             return {'success': False, 'deleted_count': 0, 'message': 'Google not authenticated'}
         
@@ -309,6 +292,30 @@ def send_telegram_message(chat_id: int, text: str, parse_mode: str = 'Markdown')
         logger.error(f"Error sending Telegram message: {e}")
         return {'success': False, 'message': str(e)}
 
+
+def get_updates(offset: int = None, timeout: int = 30) -> Dict[str, Any]:
+    """Obtener actualizaciones de Telegram (polling)"""
+    if not TELEGRAM_BASE_URL:
+        return {'success': False, 'updates': []}
+    
+    try:
+        url = f"{TELEGRAM_BASE_URL}/getUpdates"
+        params = {'timeout': timeout}
+        if offset:
+            params['offset'] = offset
+        
+        response = requests.get(url, params=params, timeout=timeout + 5)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data.get('ok'):
+            return {'success': True, 'updates': data.get('result', [])}
+        else:
+            return {'success': False, 'updates': []}
+    except Exception as e:
+        logger.error(f"Error getting updates: {e}")
+        return {'success': False, 'updates': []}
+
 # ==================== HANDLERS DE COMANDOS ====================
 
 def handle_email_command_111(chat_id: int):
@@ -328,13 +335,7 @@ def handle_email_command_111(chat_id: int):
 
 
 def handle_email_command_112(chat_id: int, days_ago: int = None):
-    """
-    112 - Eliminar emails antiguos
-    
-    Args:
-        chat_id: ID del chat de Telegram
-        days_ago: Días hacia atrás (default: EMAIL_DELETE_DAYS_AGO desde .env)
-    """
+    """112 - Eliminar emails antiguos"""
     if days_ago is None:
         days_ago = EMAIL_DELETE_DAYS_AGO
     
@@ -363,7 +364,6 @@ def handle_email_command_113(chat_id: int):
                 message += f"   De: {email['from']}\n"
                 message += f"   Fecha: {email['date']}\n\n"
                 
-                # Limitar tamaño del mensaje
                 if len(message) > 3800:
                     message += "\n_...más emails disponibles_"
                     break
@@ -410,16 +410,7 @@ def handle_calendar_command_211(chat_id: int):
 
 def handle_calendar_command_212(chat_id: int, title: str = None, date: str = None, 
                                  start_time: str = None, end_time: str = None):
-    """
-    212 - Crear evento en el calendario
-    
-    Args:
-        chat_id: ID del chat
-        title: Título del evento (default: "Cumpleaños")
-        date: Fecha YYYY-MM-DD (default: hoy)
-        start_time: Hora inicio HH:MM (default: "10:00")
-        end_time: Hora fin HH:MM (default: "11:00")
-    """
+    """212 - Crear evento en el calendario"""
     if title is None:
         title = "Cumpleaños"
     if date is None:
@@ -446,13 +437,7 @@ def handle_calendar_command_212(chat_id: int, title: str = None, date: str = Non
 
 
 def handle_calendar_command_213(chat_id: int, date: str = None):
-    """
-    213 - Eliminar eventos de hoy
-    
-    Args:
-        chat_id: ID del chat
-        date: Fecha YYYY-MM-DD (default: hoy)
-    """
+    """213 - Eliminar eventos de hoy"""
     if date is None:
         date = datetime.datetime.now().strftime('%Y-%m-%d')
     
@@ -465,135 +450,117 @@ def handle_calendar_command_213(chat_id: int, date: str = None):
     
     send_telegram_message(chat_id, message)
 
-# ==================== FLASK APP ====================
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = SECRET_KEY
-
-
-@app.route('/', methods=['GET'])
-def home():
-    """Ruta principal"""
-    return jsonify({
-        'status': 'online',
-        'service': 'Telegram Bot - Email & Calendar Automation',
-        'version': '2.0',
-        'endpoints': {
-            'health': '/health',
-            'webhook': '/webhook (POST)'
-        }
-    })
-
-
-@app.route('/health', methods=['GET'])
-def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'telegram-automation-bot',
-        'google_authenticated': google_service.authenticated,
-        'telegram_configured': TELEGRAM_BASE_URL is not None
-    })
-
-
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    """Webhook de Telegram - Recibe y procesa mensajes"""
-    try:
-        data = request.get_json()
-        
-        if not data or 'message' not in data:
-            return jsonify({'ok': True}), 200
-        
-        message = data['message']
-        chat_id = message['chat']['id']
-        text = message.get('text', '').strip()
-        
-        logger.info(f"Mensaje recibido de chat_id={chat_id}: '{text}'")
-        
-        # Comando /start
-        if text == '/start' or text == '/help':
-            help_message = """🤖 *Bot de Automatización - Email y Calendar*
+def handle_message(message: Dict[str, Any]):
+    """Procesar mensaje de Telegram"""
+    chat_id = message['chat']['id']
+    text = message.get('text', '').strip()
+    
+    logger.info(f"📩 Mensaje de chat_id={chat_id}: '{text}'")
+    
+    # Comando /start o /help
+    if text in ['/start', '/help']:
+        help_message = """🤖 *Bot de Automatización - Email y Calendar*
 
 *Comandos disponibles:*
 
 📧 *EMAIL:*
 • `111` - Enviar email de prueba
-• `112` - Eliminar emails antiguos (configurable)
+• `112` - Eliminar emails antiguos
 • `113` - Leer emails de hoy
 
 📅 *CALENDARIO:*
 • `211` - Ver eventos del mes
-• `212` - Crear evento (cumpleaños por defecto)
+• `212` - Crear evento (cumpleaños)
 • `213` - Eliminar eventos de hoy
 
-_Todos los comandos son parametrizables desde el código._
+_Escribe el número del comando que quieras ejecutar._
 """
-            send_telegram_message(chat_id, help_message)
-            return jsonify({'ok': True}), 200
-        
-        # Comandos de Email (111, 112, 113)
-        if text == '111':
-            handle_email_command_111(chat_id)
-        elif text == '112':
-            handle_email_command_112(chat_id)
-        elif text == '113':
-            handle_email_command_113(chat_id)
-        
-        # Comandos de Calendar (211, 212, 213)
-        elif text == '211':
-            handle_calendar_command_211(chat_id)
-        elif text == '212':
-            handle_calendar_command_212(chat_id)
-        elif text == '213':
-            handle_calendar_command_213(chat_id)
-        
-        # Comando desconocido
-        else:
-            if text and not text.startswith('/'):
-                send_telegram_message(chat_id, "❓ Comando no reconocido. Usa /help para ver los comandos disponibles.")
-        
-        return jsonify({'ok': True}), 200
-        
-    except Exception as e:
-        logger.error(f"Error procesando webhook: {e}", exc_info=True)
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        send_telegram_message(chat_id, help_message)
+        return
+    
+    # Comandos de Email (111, 112, 113)
+    if text == '111':
+        handle_email_command_111(chat_id)
+    elif text == '112':
+        handle_email_command_112(chat_id)
+    elif text == '113':
+        handle_email_command_113(chat_id)
+    
+    # Comandos de Calendar (211, 212, 213)
+    elif text == '211':
+        handle_calendar_command_211(chat_id)
+    elif text == '212':
+        handle_calendar_command_212(chat_id)
+    elif text == '213':
+        handle_calendar_command_213(chat_id)
+    
+    # Comando desconocido
+    else:
+        if text and not text.startswith('/'):
+            send_telegram_message(chat_id, "❓ Comando no reconocido. Usa /help para ver los comandos disponibles.")
 
 
-# ==================== PUNTO DE ENTRADA ====================
+# ==================== MAIN - POLLING LOOP ====================
 
-if __name__ == '__main__':
+def main():
+    """Loop principal de polling"""
     print("=" * 70)
-    print("🚀 Telegram Bot - Email & Calendar Automation")
+    print("🤖 Telegram Bot - Modo POLLING")
     print("=" * 70)
     print()
     
     # Validar configuración
     if not TELEGRAM_BOT_TOKEN:
-        print("⚠️  WARNING: TELEGRAM_BOT_TOKEN no configurado en .env")
-        print("   El bot no podrá enviar mensajes")
-        print()
+        print("❌ ERROR: TELEGRAM_BOT_TOKEN no configurado en .env")
+        print("   Edita el archivo .env y agrega tu token de @BotFather")
+        sys.exit(1)
     
     if not os.path.exists(GOOGLE_CREDENTIALS_PATH):
         print(f"⚠️  WARNING: {GOOGLE_CREDENTIALS_PATH} no encontrado")
         print("   Las funciones de Gmail y Calendar no funcionarán")
-        print("   Descarga credentials.json de Google Cloud Console")
         print()
     
-    print("✅ Servidor Flask iniciado")
-    print(f"📍 URL: http://{APP_HOST}:{APP_PORT}")
-    print(f"📍 Health check: http://localhost:{APP_PORT}/health")
-    print(f"📍 Webhook: http://localhost:{APP_PORT}/webhook")
-    print()
+    print("✅ Bot iniciado correctamente")
+    print("📱 Abre Telegram y habla con tu bot")
     print("💡 Presiona CTRL+C para detener")
     print("=" * 70)
     print()
     
-    # Iniciar servidor
-    app.run(
-        host=APP_HOST,
-        port=APP_PORT,
-        debug=False,
-        use_reloader=False,
-        threaded=True
-    )
+    # Primero, eliminar webhook si existe
+    try:
+        requests.post(f"{TELEGRAM_BASE_URL}/deleteWebhook")
+        logger.info("Webhook eliminado")
+    except:
+        pass
+    
+    offset = None
+    
+    try:
+        while True:
+            # Obtener actualizaciones
+            result = get_updates(offset=offset, timeout=30)
+            
+            if result['success']:
+                updates = result['updates']
+                
+                for update in updates:
+                    # Actualizar offset para no recibir el mismo mensaje dos veces
+                    offset = update['update_id'] + 1
+                    
+                    # Procesar mensaje
+                    if 'message' in update:
+                        handle_message(update['message'])
+            
+            time.sleep(0.1)  # Pequeña pausa para no saturar
+            
+    except KeyboardInterrupt:
+        print("\n\n🛑 Bot detenido por el usuario")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Error en el loop principal: {e}", exc_info=True)
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
