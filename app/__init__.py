@@ -25,13 +25,13 @@ def create_app():
     # Setup logging
     setup_logging(app)
     
-    # Validate configuration
+    # Validate configuration (non-blocking)
     try:
         config.validate()
         app.logger.info("Configuration validated successfully")
-    except ValueError as e:
-        app.logger.error(f"Configuration validation failed: {e}")
-        sys.exit(1)
+    except Exception as e:
+        app.logger.warning(f"Configuration validation warning: {e}")
+        # Don't exit, just warn
     
     # Register blueprints
     app.register_blueprint(webhook_bp)

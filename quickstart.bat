@@ -9,66 +9,68 @@ echo.
 
 REM Check if .env exists
 if not exist .env (
-    echo [1/4] Creando archivo .env...
+    echo [1/3] Creando archivo .env...
     copy .env.example .env
     echo.
     echo IMPORTANTE: Edita el archivo .env con tus credenciales!
     echo - Token de Telegram de @BotFather
     echo - Email por defecto
     echo.
+    echo Presiona Enter para abrir el archivo .env
     pause
     notepad .env
+    echo.
 ) else (
-    echo [1/4] Archivo .env ya existe
+    echo [1/3] Archivo .env ya existe
 )
 
 echo.
-echo [2/4] Verificando credentials.json...
-if not exist credentials.json (
+echo [2/3] Usando entorno virtual...
+if not exist venv_new\Scripts\python.exe (
+    echo Creando entorno virtual nuevo...
+    python -m venv venv_new
+    if errorlevel 1 (
+        echo ERROR: No se pudo crear el entorno virtual
+        pause
+        exit /b 1
+    )
+    echo Instalando paquetes...
+    venv_new\Scripts\python.exe -m pip install -q --upgrade pip setuptools wheel
+    venv_new\Scripts\python.exe -m pip install -r requirements.txt
+) else (
+    echo Entorno virtual ya existe
+)
+
+echo.
+echo [3/3] Iniciando el servidor...
+echo.
+echo NOTA: El servidor se iniciara incluso sin credentials.json
+echo      Para usar funciones de Google, necesitas:
+echo      1. Descargar credentials.json de Google Cloud Console
+echo      2. Colocarlo en esta carpeta
+echo      3. Ejecutar el servidor para autenticar
+echo.
+echo ============================================
+echo.
+echo El servidor quedara ejecutandose aqui.
+echo Abre tu navegador en: http://localhost:5000/health
+echo Para detener: presiona CTRL+C
+echo.
+echo ============================================
+echo.
+
+REM Start the server usando el python del entorno virtual limpio
+venv_new\Scripts\python.exe start.py
+
+if errorlevel 1 (
     echo.
-    echo ERROR: No se encontro credentials.json
-    echo.
-    echo Por favor:
-    echo 1. Ve a Google Cloud Console
-    echo 2. Descarga las credenciales OAuth 2.0
-    echo 3. Renombralo a credentials.json
-    echo 4. Colocalo en esta carpeta
-    echo.
+    echo ERROR al iniciar el servidor
     pause
-    exit /b 1
-) else (
-    echo credentials.json encontrado!
-)
-
-echo.
-echo [3/4] Instalando dependencias...
-if not exist venv (
-    python -m venv venv
-)
-call venv\Scripts\activate.bat
-pip install -r requirements.txt
-
-echo.
-echo [4/4] Verificando autenticacion de Google...
-if not exist token.json (
-    echo.
-    echo Se abrira el navegador para autorizar la aplicacion...
-    echo Por favor, acepta los permisos solicitados.
-    echo.
-    pause
-    python run.py
-) else (
-    echo Token de Google ya existe
-    echo.
-    echo Todo listo! Puedes ejecutar:
-    echo - python run.py  (modo desarrollo)
-    echo - docker-compose up -d  (con Docker)
-    echo.
 )
 
 echo.
 echo ============================================
-echo Setup completado!
+echo Servidor detenido
 echo ============================================
 echo.
 pause

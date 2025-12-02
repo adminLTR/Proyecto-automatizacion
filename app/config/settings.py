@@ -57,15 +57,19 @@ class Config:
     def validate(self):
         """Validate that required configuration is present."""
         errors = []
+        warnings = []
         
         if not self.TELEGRAM_BOT_TOKEN:
-            errors.append("TELEGRAM_BOT_TOKEN is required")
+            warnings.append("TELEGRAM_BOT_TOKEN is not set - set it in .env file")
         
         if not os.path.exists(self.GOOGLE_CREDENTIALS_PATH):
-            errors.append(f"Google credentials file not found: {self.GOOGLE_CREDENTIALS_PATH}")
+            warnings.append(f"Google credentials file not found: {self.GOOGLE_CREDENTIALS_PATH} - download from Google Cloud Console")
         
-        if errors:
-            raise ValueError(f"Configuration errors: {', '.join(errors)}")
+        if warnings:
+            print("\n⚠️  WARNING: Missing configuration:")
+            for warning in warnings:
+                print(f"   - {warning}")
+            print("\n   The app will start but some features may not work until configured.\n")
         
         return True
 

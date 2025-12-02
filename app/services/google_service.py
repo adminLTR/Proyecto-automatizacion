@@ -24,7 +24,14 @@ class GoogleService:
         self.creds = None
         self.calendar_service = None
         self.gmail_service = None
-        self._authenticate()
+        self.authenticated = False
+        try:
+            self._authenticate()
+            self.authenticated = True
+        except Exception as e:
+            print(f"⚠️  Google authentication failed: {e}")
+            print("   Some features will not work until you configure Google credentials.")
+            self.authenticated = False
     
     def _authenticate(self):
         """Authenticate with Google API and create service objects."""
@@ -68,6 +75,12 @@ class GoogleService:
         Returns:
             Dict with status and message
         """
+        if not self.authenticated:
+            return {
+                'success': False,
+                'message': 'Google service not authenticated. Please configure credentials.json'
+            }
+        
         try:
             message = MIMEText(body)
             message['to'] = recipient
@@ -107,6 +120,13 @@ class GoogleService:
         Returns:
             Dict with status and list of emails
         """
+        if not self.authenticated:
+            return {
+                'success': False,
+                'message': 'Google service not authenticated. Please configure credentials.json',
+                'emails': []
+            }
+        
         try:
             query = ''
             if days_ago > 0:
@@ -161,6 +181,13 @@ class GoogleService:
         Returns:
             Dict with status and count of deleted emails
         """
+        if not self.authenticated:
+            return {
+                'success': False,
+                'message': 'Google service not authenticated. Please configure credentials.json',
+                'deleted_count': 0
+            }
+        
         try:
             date = (datetime.datetime.now() - datetime.timedelta(days=days_ago)).strftime('%Y/%m/%d')
             query = f'before:{date}'
@@ -205,6 +232,13 @@ class GoogleService:
         Returns:
             Dict with status and list of events
         """
+        if not self.authenticated:
+            return {
+                'success': False,
+                'message': 'Google service not authenticated. Please configure credentials.json',
+                'events': []
+            }
+        
         try:
             if not time_min:
                 time_min = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -259,6 +293,12 @@ class GoogleService:
         Returns:
             Dict with status and event details
         """
+        if not self.authenticated:
+            return {
+                'success': False,
+                'message': 'Google service not authenticated. Please configure credentials.json'
+            }
+        
         try:
             # Parse datetime
             start_datetime = datetime.datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
@@ -317,6 +357,13 @@ class GoogleService:
         Returns:
             Dict with status and count of deleted events
         """
+        if not self.authenticated:
+            return {
+                'success': False,
+                'message': 'Google service not authenticated. Please configure credentials.json',
+                'deleted_count': 0
+            }
+        
         try:
             # Parse date
             target_date = datetime.datetime.strptime(date, "%Y-%m-%d")
