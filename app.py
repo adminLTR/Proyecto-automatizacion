@@ -44,7 +44,6 @@ GOOGLE_SCOPES = [
 
 # Email y Calendar
 DEFAULT_EMAIL_RECIPIENT = os.getenv('DEFAULT_EMAIL_RECIPIENT', 'default@example.com')
-EMAIL_DELETE_DAYS_AGO = int(os.getenv('EMAIL_DELETE_DAYS_AGO', 7))
 CALENDAR_TIMEZONE = os.getenv('CALENDAR_TIMEZONE', 'America/Lima')
 
 # Logging
@@ -156,27 +155,6 @@ class GoogleService:
             return {'success': True, 'count': len(email_list), 'emails': email_list}
         except Exception as e:
             return {'success': False, 'emails': [], 'message': str(e)}
-    
-    def delete_old_emails(self, days_ago: int = 7) -> Dict[str, Any]:
-        """Eliminar emails antiguos (mover a papelera)"""
-        if not self.authenticated:
-            return {'success': False, 'deleted_count': 0, 'message': 'Google not authenticated'}
-        
-        try:
-            date = (datetime.datetime.now() - datetime.timedelta(days=days_ago)).strftime('%Y/%m/%d')
-            query = f'before:{date}'
-            
-            results = self.gmail_service.users().messages().list(userId='me', q=query).execute()
-            messages = results.get('messages', [])
-            
-            deleted_count = 0
-            for msg in messages:
-                self.gmail_service.users().messages().trash(userId='me', id=msg['id']).execute()
-                deleted_count += 1
-            
-            return {'success': True, 'deleted_count': deleted_count}
-        except Exception as e:
-            return {'success': False, 'deleted_count': 0, 'message': str(e)}
     
     # ---------- CALENDAR METHODS ----------
     
@@ -334,21 +312,6 @@ def handle_email_command_111(chat_id: int):
     send_telegram_message(chat_id, message)
 
 
-def handle_email_command_112(chat_id: int, days_ago: int = None):
-    """112 - Eliminar emails antiguos"""
-    if days_ago is None:
-        days_ago = EMAIL_DELETE_DAYS_AGO
-    
-    result = google_service.delete_old_emails(days_ago)
-    
-    if result['success']:
-        message = f"✅ *Emails eliminados*\n\n🗑️ Movidos a papelera: {result['deleted_count']} emails\n📅 Más antiguos que: {days_ago} días"
-    else:
-        message = f"❌ *Error al eliminar emails*\n\n{result['message']}"
-    
-    send_telegram_message(chat_id, message)
-
-
 def handle_email_command_113(chat_id: int):
     """113 - Leer emails de hoy"""
     result = google_service.list_emails(max_results=10, days_ago=0)
@@ -466,7 +429,6 @@ def handle_message(message: Dict[str, Any]):
 
 📧 *EMAIL:*
 • `111` - Enviar email de prueba
-• `112` - Eliminar emails antiguos
 • `113` - Leer emails de hoy
 
 📅 *CALENDARIO:*
@@ -479,11 +441,9 @@ _Escribe el número del comando que quieras ejecutar._
         send_telegram_message(chat_id, help_message)
         return
     
-    # Comandos de Email (111, 112, 113)
+    # Comandos de Email (111, 113)
     if text == '111':
         handle_email_command_111(chat_id)
-    elif text == '112':
-        handle_email_command_112(chat_id)
     elif text == '113':
         handle_email_command_113(chat_id)
     

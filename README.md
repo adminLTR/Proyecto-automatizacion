@@ -75,7 +75,6 @@ La primera vez se abrirá tu navegador para autorizar Google APIs.
 
 ### Email (Gmail)
 - **111** - Enviar email de prueba
-- **112** - Eliminar emails antiguos (configurable en `.env`)
 - **113** - Leer emails de hoy
 
 ### Calendar (Google Calendar)
@@ -91,9 +90,6 @@ La primera vez se abrirá tu navegador para autorizar Google APIs.
 ### Parámetros personalizables en `.env`:
 
 ```bash
-# Días hacia atrás para eliminar emails (comando 112)
-EMAIL_DELETE_DAYS_AGO=7
-
 # Zona horaria para eventos del calendario
 CALENDAR_TIMEZONE=America/Lima
 
@@ -106,9 +102,6 @@ APP_PORT=5000
 Todas las funciones en `app.py` son parametrizables:
 
 ```python
-# Ejemplo: Cambiar días para eliminar emails
-handle_email_command_112(chat_id, days_ago=14)  # 14 días en lugar de 7
-
 # Ejemplo: Crear evento personalizado
 handle_calendar_command_212(
     chat_id, 
