@@ -1,0 +1,29 @@
+
+======================================================================
+REUNION AGENDADA
+======================================================================
+
+DATOS DE LA REUNION:
+  Fecha:        2025-12-14
+  Hora inicio:  14:00
+  Hora fin:     14:30
+  Duracion:     30 minutos
+
+  Asunto:       Problemas de la empresa
+  Descripcion:  Sin descripción adicional
+
+CONFIGURACION AUTOMATICA:
+  Tipo:         seguimiento
+  Prioridad:    media
+  Formato:      semi-formal
+  Recordatorios: 60, 15 minutos antes
+
+OPTIMIZACION:
+  Status:       suboptimo
+  Score:        20
+  Recomendaciones:
+    - Considera agendar en dia laboral
+
+======================================================================
+Archivo generado: 2025-12-01 23:49:28
+======================================================================
